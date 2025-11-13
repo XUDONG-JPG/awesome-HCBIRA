@@ -199,7 +199,7 @@ for sample_dir in ${datadir}/*/; do
     #
     # Outputs: *_T0_stats.txt, *_IMGT_aligned_results.bam, *_results_summary.txt
     echo "6.1/ Mapping to hg38 for ${sample_id}..."
-    # =============== 检查索引文件是否存在 ===============
+    # =============== Check if the index file exists ===============
     if [ ! -f "${hg38_ref}.bwt" ] || [ ! -f "${hg38_ref}.pac" ] || [ ! -f "${hg38_ref}.ann" ] || [ ! -f "${hg38_ref}.amb" ] || [ ! -f "${hg38_ref}.sa" ]; then
         echo "[INFO] Index file not found. Start indexing..."
         bwa index "${hg38_ref}"
@@ -207,7 +207,7 @@ for sample_dir in ${datadir}/*/; do
         echo "[INFO] Index file already exists. Skipping indexing."
     fi
 
-    # =============== Step ①: 初次比对（T=0） ===============
+    # =============== Step ①: Initial alignment（T=0） ===============
     T0_sam="$outdir/${sample_id}_aligned_T0.sam"
     T0_primary_sam="$outdir/${sample_id}_T0_primary.sam"
     MAPQ_txt="$outdir/${sample_id}_MAPQ_T0.txt"
@@ -234,7 +234,7 @@ for sample_dir in ${datadir}/*/; do
             print "Median:", median > "'$T0_stats'"
             print "Average:", ave >> "'$T0_stats'"
         }' "$MAPQ_txt"
-        # =============== Step ②: 提取 median 并进行重新比对 ===============
+        # =============== Step ②: Extract 'median' and realign ===============
         median=$(grep 'Median:' "$T0_stats" | awk '{print $2}')
         if [ -z "$median" ]; then
             echo "[ERROR] Median not found. Please re-check MAPQ stats."
@@ -281,7 +281,7 @@ for sample_dir in ${datadir}/*/; do
         samtools view -b -F 4 "$outdir/${sample_id}_aligned_to_imgt_primary_only_sorted.bam" > "$imgt_bam"
     fi
 
-    # =============== Step ④: 汇总结果统计 ===============
+    # =============== Step ④: Summary result statistics ===============
     echo "6.3/ Calculating results summary for ${sample_id}..."
     total_IMGT_aligned_count=$(samtools view -c "$imgt_bam")
     samtools view "$imgt_bam" | cut -f1 > "$outdir/${sample_id}_imgt_reads.txt"
@@ -299,7 +299,7 @@ for sample_dir in ${datadir}/*/; do
     echo "Overlap ratio: $overlap_ratio"
     echo "Unmatched ratio: $unmatched_hg38_ratio"
 
-    # =============== Step ⑤: GTF注释分析 ===============
+    # =============== Step ⑤: GTF annotation analysis ===============
     bedtools bamtobed -i "$outdir/${sample_id}_aligned_T_median_primary.bam" > "$outdir/${sample_id}_aligned_T_median_primary.bed"
     bedtools intersect -a "$outdir/${sample_id}_aligned_T_median_primary.bed" \
                     -b "/prepare_file_path/download/gencode.v45.annotation.gtf" \
@@ -322,7 +322,7 @@ for sample_dir in ${datadir}/*/; do
     imgt_reservedGENE_except_TCR_overlap=$(grep -Fwf $outdir/${sample_id}_temp_sequence_names_from_bed.txt $outdir/${sample_id}_temp_sequence_names_from_bam.txt | wc -l)
     overlap_IMGT_ratio=$(awk -v overlap="$imgt_reservedGENE_except_TCR_overlap" -v IMGT="$total_IMGT_aligned_count" 'BEGIN {printf "%.4f", overlap / IMGT}')
 
-    # =============== Step ⑥: 结果输出 ===============
+    # =============== Step ⑥: Result output ===============
     {
         echo "Sample: $sample_id"
         echo "Total reads count: $total_reads_count"
